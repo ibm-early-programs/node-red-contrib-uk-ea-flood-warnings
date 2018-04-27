@@ -22,10 +22,8 @@ module.exports = function(RED) {
     return Promise.resolve();
   }
 
-  function getFloodAlerts(msg) {
+  function processRequest(uriAddress) {
     var p = new Promise(function resolver(resolve, reject) {
-      let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floods';
-
       request({
         uri: uriAddress,
         method: 'GET'
@@ -43,25 +41,21 @@ module.exports = function(RED) {
     return p;
   }
 
-  function fetchFloodAreas() {
-    var p = new Promise(function resolver(resolve, reject) {
-      let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floodAreas';
+  function getFloodAlerts(config) {
+    let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floods';
+    if (config && config.area) {
+      //console.log('Have Area Setting of : ', config.area);
+      if ('All Flooded Areas' !== config.area) {
+        uriAddress += '?county=';
+        uriAddress += config.area;
+      }
+    }
+    return processRequest(uriAddress);
+  }
 
-      request({
-        uri: uriAddress,
-        method: 'GET'
-      }, (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-          var b = JSON.parse(body);
-          resolve(b);
-        } else if (error) {
-          reject(error);
-        } else {
-          reject('Error Invoking API ' + response.statusCode);
-        }
-      });
-    });
-    return p;
+  function fetchFloodAreas() {
+    let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floodAreas';
+    return processRequest(uriAddress);
   }
 
   function buildResponse(msg, data) {
@@ -158,7 +152,7 @@ module.exports = function(RED) {
 
       verifyPayload(msg)
         .then(function() {
-          return getFloodAlerts(msg);
+          return getFloodAlerts(config);
         })
         .then(function(data) {
           return buildResponse(msg, data);

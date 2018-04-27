@@ -68,6 +68,8 @@
   ukea01.addRowtoAreaList = function(a) {
     //console.log('Looking at ', a);
     var selectedText = '';
+    //console.log('selected area is ', ukea01.area_selected);
+
     if (ukea01.area_selected === a) {
       selectedText = 'selected="selected"';
     }
@@ -109,6 +111,7 @@
 
   function ukea01oneditprepare() {
     console.log('Inside On Edit Prepare for Flood Alerts Node');
+    ukea01.restoreHidden();
     if (! ukea01.areas) {
       ukea01.fetchAreas();
     } else {
