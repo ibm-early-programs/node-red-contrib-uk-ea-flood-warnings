@@ -22,6 +22,16 @@ module.exports = function(RED) {
     return Promise.resolve();
   }
 
+  function checkForValidMsgOverride(msg) {
+    // if provided the overide must be a string
+    if (msg.floodarea) {
+      if ('string' !== typeof msg.floodarea) {
+        return Promise.reject('msg.floodarea can only be a string');
+      }
+    }
+    return Promise.resolve();
+  }
+
   function processRequest(uriAddress) {
     var p = new Promise(function resolver(resolve, reject) {
       request({
@@ -41,15 +51,22 @@ module.exports = function(RED) {
     return p;
   }
 
-  function getFloodAlerts(config) {
+  function getFloodAlerts(msg, config) {
     let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floods';
-    if (config && config.area) {
+    let floodarea = null;
+
+    if (msg.floodarea) {
+      floodarea = msg.floodarea;
+    } else if (config && config.area) {
       //console.log('Have Area Setting of : ', config.area);
-      if ('All Flooded Areas' !== config.area) {
-        uriAddress += '?county=';
-        uriAddress += config.area;
-      }
+      floodarea = config.area;
     }
+
+    if (floodarea && 'All Flooded Areas' !== floodarea) {
+      uriAddress += '?county=';
+      uriAddress += floodarea;
+    }
+
     return processRequest(uriAddress);
   }
 
@@ -152,7 +169,10 @@ module.exports = function(RED) {
 
       verifyPayload(msg)
         .then(function() {
-          return getFloodAlerts(config);
+          return checkForValidMsgOverride(msg);
+        })
+        .then(function() {
+          return getFloodAlerts(msg, config);
         })
         .then(function(data) {
           return buildResponse(msg, data);
