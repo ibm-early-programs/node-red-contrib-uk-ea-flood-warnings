@@ -15,10 +15,40 @@
  **/
 
 module.exports = function(RED) {
-  var fs = require('fs');
+  const request = require('request');
 
   function verifyPayload(msg) {
     // For now doesn't matter what is in the payload
+    return Promise.resolve();
+  }
+
+  function getFloodAlerts(msg) {
+    var p = new Promise(function resolver(resolve, reject) {
+      let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floods';
+
+      request({
+        uri: uriAddress,
+        method: 'GET'
+      }, (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          var b = JSON.parse(body);
+          resolve(b);
+        } else if (error) {
+          reject(error);
+        } else {
+          reject('Error Invoking API ' + response.statusCode);
+        }
+      });
+    });
+    return p;
+  }
+
+  function buildResponse(msg, data) {
+    if (data && data.items) {
+      msg.payload = data.items;
+    } else {
+      msg.payload = data;
+    }
     return Promise.resolve();
   }
 
@@ -65,7 +95,10 @@ module.exports = function(RED) {
 
       verifyPayload(msg)
         .then(function() {
-          return inProgress(msg);
+          return getFloodAlerts(msg);
+        })
+        .then(function(data) {
+          return buildResponse(msg, data);
         })
         .then(function() {
           node.status({});

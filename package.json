@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Wrapper tp UK EA Flood Warnings API",
   "dependencies": {
+    "request": "^2.85.0"
   },
   "repository": {
     "type": "git",
@@ -13,14 +14,15 @@
     "node-red",
     "flood"
   ],
-  "contributors": [ {
+  "contributors": [
+    {
       "name": "Soheel Chughtai",
       "email": "soheel_chughtai@uk.ibm.com"
     }
   ],
   "node-red": {
     "nodes": {
-      "uk-flood-warnings":"nodes/v1.js"
+      "uk-flood-warnings": "nodes/v1.js"
     }
   }
 }
