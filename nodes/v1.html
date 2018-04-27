@@ -1,0 +1,152 @@
+<!--
+  Copyright 2018 IBM Corp.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<script type="text/x-red" data-template-name="uk-flood-warnings">
+  <div class="form-row">
+    <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+    <input type="text" id="node-input-name" placeholder="Name">
+  </div>
+
+  <div class="form-row">
+      <label for="node-input-area"><i class="fa fa-comments-o"></i> Area</label>
+      <select type="text" id="node-input-area" style="display: inline-block; vertical-align:middle; width: 70%;">
+      </select>
+  </div>
+  <div>
+      <input type="hidden" id="node-input-areahidden"/>
+  </div>
+
+</script>
+
+<script type="text/x-red" data-help-name="uk-flood-warnings">
+  <p>Some Help and usage text will go here.
+  </p>
+
+  <p><b>Usage</b></p>
+  <p>This node should be provided in input : </p>
+</script>
+
+<style type="text/css">
+  .node_label_white {
+    fill: white;
+  }
+
+  #palette_node_uk-flood-warnings>div.palette_label {
+    color: white;
+  }
+</style>
+
+<script type="text/javascript">
+
+  function UKEA01 () {
+  }
+
+  var ukea01 = new UKEA01();
+  ukea01.areas = null;
+
+  ukea01.area_selected = $('#node-input-areahidden').val();
+
+
+  ukea01.restoreHidden = function () {
+    ukea01.area_selected = $('#node-input-areahidden').val();
+    $('#node-input-area').val(ukea01.area_selected);
+  }
+
+  ukea01.addRowtoAreaList = function(a) {
+    //console.log('Looking at ', a);
+    var selectedText = '';
+    //console.log('selected area is ', ukea01.area_selected);
+
+    if (ukea01.area_selected === a) {
+      selectedText = 'selected="selected"';
+    }
+    $('select#node-input-area')
+      .append('<option value='
+                    + '"' + a + '"'
+                    + selectedText
+                    + '>'
+                    + a
+                    + '</option>');
+  }
+
+  ukea01.rebuildAreaList = function () {
+    // Flush out the list first
+    //console.log('Rebuilding Area List');
+    $('select#node-input-area').empty();
+    ukea01.addRowtoAreaList('All Flooded Areas');
+    ukea01.areas.forEach( function (a) {
+      ukea01.addRowtoAreaList(a);
+    })
+  }
+
+
+  ukea01.fetchAreas = function () {
+    if (!ukea01.areas) {
+      $.getJSON('ukea/areas/')
+        .done(function (data) {
+          //console.log('data returned is ', data);
+          //console.log('data.areas is ', data.areas);
+          if (data.areas) {
+            ukea01.areas = data.areas;
+            ukea01.rebuildAreaList();
+          }
+        }).fail(function (err) {
+          console.log(err);
+        }).always(function () {});
+    }
+  }
+
+  function ukea01oneditprepare() {
+    console.log('Inside On Edit Prepare for Flood Alerts Node');
+    ukea01.restoreHidden();
+    if (! ukea01.areas) {
+      ukea01.fetchAreas();
+    } else {
+      ukea01.rebuildAreaList();
+    }
+  }
+
+  function ukea01oneditsave(){
+    ukea01.area_selected = $('#node-input-area').val();
+    $('#node-input-areahidden').val(ukea01.area_selected);
+  }
+
+  (function() {
+    RED.nodes.registerType('uk-flood-warnings', {
+      category: 'function',
+      defaults: {
+        name: { value: '' },
+        area: {value: ''},
+        areahidden: {value: ''}
+      },
+      credentials: {
+      },
+      color: 'rgb(50,20,150)',
+      inputs: 1,
+      outputs: 1,
+      paletteLabel: 'uk flood warnings',
+      icon: 'alert.png',
+      label: function() {
+        return this.name || 'uk flood warnings';
+      },
+      labelStyle: function() {
+        return this.name ? 'node_label_italic node_label_white' : 'node_label_white';
+      },
+      oneditprepare: ukea01oneditprepare,
+      oneditsave: ukea01oneditsave
+    });
+  })();
+</script>
