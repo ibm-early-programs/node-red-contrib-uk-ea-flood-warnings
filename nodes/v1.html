@@ -40,6 +40,34 @@
 </style>
 
 <script type="text/javascript">
+
+  function UKEA01 () {
+  }
+
+  var ukea01 = new UKEA01();
+  ukea01.areas = null;
+
+  ukea01.fetchAreas = function () {
+    if (!ukea01.areas) {
+      $.getJSON('ukea/areas/')
+        .done(function (data) {
+          console.log('data returned is ', data);
+          if (data.areas) {
+            ukea01.areas = data.areas;
+          }
+        }).fail(function (err) {
+          console.log(err);
+        }).always(function () {});
+    }
+  }
+
+  function ukea01oneditprepare() {
+    console.log('Inside On Edit Prepare for Flood Alerts Node');
+    if (! ukea01.areas) {
+      ukea01.fetchAreas();
+    }
+  }
+
   (function() {
     RED.nodes.registerType('uk-flood-warnings', {
       category: 'function',
@@ -58,7 +86,8 @@
       },
       labelStyle: function() {
         return this.name ? 'node_label_italic node_label_white' : 'node_label_white';
-      }
+      },
+      oneditprepare: ukea01oneditprepare,
     });
   })();
 </script>

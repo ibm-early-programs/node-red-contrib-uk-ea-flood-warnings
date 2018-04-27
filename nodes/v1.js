@@ -43,6 +43,27 @@ module.exports = function(RED) {
     return p;
   }
 
+  function fetchFloodAreas() {
+    var p = new Promise(function resolver(resolve, reject) {
+      let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floodAreas';
+
+      request({
+        uri: uriAddress,
+        method: 'GET'
+      }, (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          var b = JSON.parse(body);
+          resolve(b);
+        } else if (error) {
+          reject(error);
+        } else {
+          reject('Error Invoking API ' + response.statusCode);
+        }
+      });
+    });
+    return p;
+  }
+
   function buildResponse(msg, data) {
     if (data && data.items) {
       msg.payload = data.items;
@@ -50,6 +71,31 @@ module.exports = function(RED) {
       msg.payload = data;
     }
     return Promise.resolve();
+  }
+
+  function inList(theList, theValue) {
+    let found = false;
+    theList.forEach((v) => {
+      if (v === theValue) {
+        found = true;
+      }
+    });
+    return found
+  }
+
+  function buildAreaResponse(data) {
+    //console.log('Area Data looks like : ', data);
+    let areas = {'areas' : []};
+    if (data && data.items && Array.isArray(data.items)) {
+      data.items.forEach((d) => {
+        if (d.county) {
+          if (!inList(areas.areas, d.county)) {
+            areas.areas.push(d.county);
+          }
+        }
+      });
+    }
+    return Promise.resolve(areas);
   }
 
   function inProgress(msg) {
@@ -80,6 +126,23 @@ module.exports = function(RED) {
     msg.result['error'] = err;
     node.error(messageTxt, msg);
   }
+
+
+  // API used by widget to fetch available areas
+  RED.httpAdmin.get('/ukea/areas/', function (req, res) {
+    fetchFloodAreas()
+      .then( (data) => {
+        return buildAreaResponse(data);
+      })
+      .then( (areas) => {
+        res.json(areas);
+      })
+      .catch(function(err) {
+        res.json({error:'Not able to fetch models'});
+      });
+  });
+
+
 
   function Node(config) {
     var node = this;
