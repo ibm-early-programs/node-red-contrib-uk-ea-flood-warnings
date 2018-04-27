@@ -94,6 +94,7 @@ module.exports = function(RED) {
           }
         }
       });
+      areas.areas.sort();
     }
     return Promise.resolve(areas);
   }
@@ -141,7 +142,6 @@ module.exports = function(RED) {
         res.json({error:'Not able to fetch models'});
       });
   });
-
 
 
   function Node(config) {
