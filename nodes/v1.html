@@ -32,7 +32,27 @@
 </script>
 
 <script type="text/x-red" data-help-name="uk-flood-warnings">
-  <p>Some Help and usage text will go here.
+  <p>This is a node-red wrapper to the UK Environment Agency Real Time
+    Flood-monitoring.
+  </p>
+
+  <p>For more information about the service API,
+     goto <a href="http://envrionment/data.gov.uk/flood-monitoring/doc/reference">API Documentation</a>.
+  </p>
+
+  <p>
+    Use the configuration to select the area to search for. If you select
+    <code>All Flooded Areas</code>
+    all active flood alerts will be returned.
+  </p>
+  <p>
+    You can override the area setting by setting
+    <code>msg.floodarea</code>, which must be a comma separated
+    string.
+  </p>
+  <p>
+    The output is a json array on <code>msg.payload</code>. If there are no
+    flood alerts in the selected area then the array is empty.
   </p>
 
   <p><b>Usage</b></p>
