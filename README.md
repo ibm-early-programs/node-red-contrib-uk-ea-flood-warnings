@@ -7,23 +7,24 @@ Flood-monitoring [API](http://envrionment/data.gov.uk/flood-monitoring/doc/refer
 Use the manage palette option to install this node
 
 ## Usage
-This node allows you to run query the UK Environment Agency Flood Warning API
+This node allows you to run queries against the UK Environment Agency Flood Warning API
 
 ## Configuration
-Use the configuration to select the area to search for. If you select `All Flooded Areas`
-all active flood alerts will be returned.
+Use the configuration to select the mode.
+If floods are selected then `All Flooded Areas` will return
+all active flood alerts. If tides are selected then `All Stations` will return details and measurements for all tidal measurement stations.
 
 ### Input
  `msg.payload` is not required. The node needs to be configured
-to select an area. A list of available areas is
+to select an area. A list of available areas and tidal stations is
 automatically retrieved by the node, making use of the API.
 
 You can override the area setting by setting `msg.floodarea`, which must be a comma separated
 string.
 
 ### Output
-The output is a json array on `msg.payload`. If there are no
-flood alerts in the selected area then the array is empty.
+The output is a json array on `msg.payload`. When running in flood mode and there are no
+flood alerts in the selected area then the array is empty. 
 
 
 ## Contributing

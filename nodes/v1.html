@@ -21,6 +21,14 @@
   </div>
 
   <div class="form-row">
+      <label for="node-input-mode"><i class="fa fa-book"></i> Mode: </label>
+      <select type="text" id="node-input-mode" style="display: inline-block; width: 70%;">
+          <option value="flood">Flood Alerts</option>
+          <option value="tide">Tide Gauge Station Measurements</option>
+        </select>
+  </div>
+
+  <div class="form-row">
       <label for="node-input-area"><i class="fa fa-comments-o"></i> Area</label>
       <select type="text" id="node-input-area" style="display: inline-block; vertical-align:middle; width: 70%;">
       </select>
@@ -28,6 +36,16 @@
   <div>
       <input type="hidden" id="node-input-areahidden"/>
   </div>
+
+  <div class="form-row">
+      <label for="node-input-station"><i class="fa fa-comments-o"></i> Station</label>
+      <select type="text" id="node-input-station" style="display: inline-block; vertical-align:middle; width: 70%;">
+      </select>
+  </div>
+  <div>
+      <input type="hidden" id="node-input-stationhidden"/>
+  </div>
+
 
 </script>
 
@@ -76,30 +94,44 @@
 
   var ukea01 = new UKEA01();
   ukea01.areas = null;
+  ukea01.stations = null;
 
   ukea01.area_selected = $('#node-input-areahidden').val();
-
+  ukea01.station_selected = $('#node-input-stationhidden').val();
 
   ukea01.restoreHidden = function () {
     ukea01.area_selected = $('#node-input-areahidden').val();
     $('#node-input-area').val(ukea01.area_selected);
+
+    ukea01.station_selected = $('#node-input-stationhidden').val();
+    $('#node-input-station').val(ukea01.station_selected);
+  }
+
+
+  ukea01.addRowtoList = function(entry, s, f) {
+    let selectedText = '';
+
+    if (s === entry.id) {
+      selectedText = 'selected="selected"';
+    }
+
+    //console.log('Adding Entry ', entry);
+
+    f.append('<option value='
+                    + '"' + entry.id + '"'
+                    + selectedText
+                    + '>'
+                    + entry.name
+                    + '</option>');
   }
 
   ukea01.addRowtoAreaList = function(a) {
-    //console.log('Looking at ', a);
-    var selectedText = '';
-    //console.log('selected area is ', ukea01.area_selected);
+    let entry = {id : a, name : a};
+    ukea01.addRowtoList(entry, ukea01.area_selected, $('select#node-input-area'));
+  }
 
-    if (ukea01.area_selected === a) {
-      selectedText = 'selected="selected"';
-    }
-    $('select#node-input-area')
-      .append('<option value='
-                    + '"' + a + '"'
-                    + selectedText
-                    + '>'
-                    + a
-                    + '</option>');
+  ukea01.addRowtoStationList = function(a) {
+    ukea01.addRowtoList(a, ukea01.station_selected, $('select#node-input-station'));
   }
 
   ukea01.rebuildAreaList = function () {
@@ -112,6 +144,15 @@
     })
   }
 
+  ukea01.rebuildStationList = function () {
+    // Flush out the list first
+    //console.log('Rebuilding Area List');
+    $('select#node-input-stations').empty();
+    ukea01.addRowtoStationList({id : 'All Stations', name: 'All Stations'});
+    ukea01.stations.forEach( function (a) {
+      ukea01.addRowtoStationList(a);
+    })
+  }
 
   ukea01.fetchAreas = function () {
     if (!ukea01.areas) {
@@ -129,9 +170,65 @@
     }
   }
 
-  function ukea01oneditprepare() {
-    console.log('Inside On Edit Prepare for Flood Alerts Node');
-    ukea01.restoreHidden();
+  ukea01.fetchStations = function () {
+    if (!ukea01.stations) {
+      $.getJSON('ukea/stations/')
+        .done(function (data) {
+          //console.log('data returned is ', data);
+          console.log('data.areas is ', data.stations);
+          if (data.stations) {
+            ukea01.stations = data.stations;
+            ukea01.rebuildStationList();
+          }
+        }).fail(function (err) {
+          console.log(err);
+        }).always(function () {});
+    }
+  }
+
+  ukea01.showSelectedFields = function(fields) {
+    for (i = 0; i < fields.length; i++) {
+      $(fields[i]).parent().show();
+    }
+  }
+
+  ukea01.hideSelectedFields = function(fields) {
+    for (i = 0; i < fields.length; i++) {
+      $(fields[i]).parent().hide();
+    }
+  }
+
+  ukea01.hideEverything = function () {
+    var hidefields = [];
+
+    hidefields.push('#node-input-area');
+    hidefields.push('#node-input-station');
+
+    ukea01.hideSelectedFields(hidefields);
+  }
+
+  ukea01.processSelectedMode = function(mode) {
+    ukea01.hideEverything();
+    var fields = [];
+    switch (mode) {
+      case 'flood':
+        fields.push('#node-input-area');
+        break;
+      case 'tide':
+        fields.push('#node-input-station');
+        break;
+    }
+    ukea01.showSelectedFields(fields);
+  }
+
+  // Register the handlers for the fields
+  ukea01.handlersUI = function () {
+    $('#node-input-mode').change(function() {
+      ukea01.processSelectedMode($('#node-input-mode').val());
+    });
+  }
+
+  ukea01.initAreas = function () {
     if (! ukea01.areas) {
       ukea01.fetchAreas();
     } else {
@@ -139,9 +236,28 @@
     }
   }
 
+  ukea01.initStations = function () {
+    if (! ukea01.stations) {
+      ukea01.fetchStations();
+    } else {
+      ukea01.rebuildStationList();
+    }
+  }
+
+  function ukea01oneditprepare() {
+    console.log('Inside On Edit Prepare for Flood Alerts Node');
+    ukea01.handlersUI();
+    ukea01.restoreHidden();
+    ukea01.initAreas();
+    ukea01.initStations();
+  }
+
   function ukea01oneditsave(){
     ukea01.area_selected = $('#node-input-area').val();
     $('#node-input-areahidden').val(ukea01.area_selected);
+
+    ukea01.station_selected = $('#node-input-station').val();
+    $('#node-input-stationhidden').val(ukea01.station_selected);
   }
 
   (function() {
@@ -149,8 +265,11 @@
       category: 'function',
       defaults: {
         name: { value: '' },
-        area: {value: ''},
-        areahidden: {value: ''}
+        mode: { value: 'flood' },
+        area: { value: '' },
+        areahidden: { value: '' },
+        station: { value: '' },
+        stationhidden: { value: '' }
       },
       credentials: {
       },
