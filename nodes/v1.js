@@ -70,10 +70,34 @@ module.exports = function(RED) {
     return processRequest(uriAddress);
   }
 
+  function getTideMeasure(msg, config) {
+    let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/measures?stationType=TideGauge';
+    let station = null;
+
+    if (config && config.station) {
+      station = config.station;
+    }
+
+    if (station && 'All Stations' !== station) {
+      uriAddress = `http://environment.data.gov.uk/flood-monitoring/id/stations/${station}/measures`;
+    }
+
+    console.log('Will be running aginst ', uriAddress);
+
+    return processRequest(uriAddress);
+  }
+
+
   function fetchFloodAreas() {
     let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/floodAreas';
     return processRequest(uriAddress);
   }
+
+  function fetchTideStations() {
+    let uriAddress = 'http://environment.data.gov.uk/flood-monitoring/id/stations?type=TideGauge';
+    return processRequest(uriAddress);
+  }
+
 
   function buildResponse(msg, data) {
     if (data && data.items) {
@@ -109,6 +133,43 @@ module.exports = function(RED) {
     }
     return Promise.resolve(areas);
   }
+
+  function compareStations(a, b) {
+    let x = a.name.toLowerCase();
+    let y = b.name.toLowerCase();
+    if (x < y) {return -1;}
+    if (x > y) {return 1;}
+    return 0;
+  }
+
+  function buildStationResponse(data) {
+    console.log('Stations Data looks like : ', data.items);
+    let stations = {'stations' : []};
+    if (data && data.items && Array.isArray(data.items)) {
+      data.items.forEach((d) => {
+        if (d.notation &&
+              'string' === typeof d.notation) {
+          //console.log('entry looks like ', d);
+          let station = {};
+          station.id = d.notation;
+          if (d.label && d.catchmentName) {
+            station.name = d.label + ' : ' + d.catchmentName;
+          } else {
+            station.name = d.label ? d.label : d.notation;
+            if (d.stationReference) {
+              station.name += (' : ' + d.stationReference);
+            }
+          }
+          //console.log('sending ', station);
+          stations.stations.push(station);
+        }
+      });
+      stations.stations.sort(compareStations);
+    }
+    //console.log('Returning : ', stations);
+    return Promise.resolve(stations);
+  }
+
 
   function inProgress(msg) {
     // Dummy Function to use when building the structure
@@ -150,9 +211,24 @@ module.exports = function(RED) {
         res.json(areas);
       })
       .catch(function(err) {
-        res.json({error:'Not able to fetch models'});
+        res.json({error:'Not able to fetch Areas'});
       });
   });
+
+  // API used by widget to fetch available areas
+  RED.httpAdmin.get('/ukea/stations/', function (req, res) {
+    fetchTideStations()
+      .then( (data) => {
+        return buildStationResponse(data);
+      })
+      .then( (stations) => {
+        res.json(stations);
+      })
+      .catch(function(err) {
+        res.json({error:'Not able to fetch tide stations'});
+      });
+  });
+
 
 
   function Node(config) {
@@ -172,7 +248,17 @@ module.exports = function(RED) {
           return checkForValidMsgOverride(msg);
         })
         .then(function() {
-          return getFloodAlerts(msg, config);
+          switch (config.mode) {
+            case 'flood' :
+              return getFloodAlerts(msg, config);
+              break;
+            case 'tide' :
+              return getTideMeasure(msg, config);
+              break;
+            default:
+              return Promise.reject('Unknown mode specified');
+              break;
+          }
         })
         .then(function(data) {
           return buildResponse(msg, data);
